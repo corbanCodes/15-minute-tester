@@ -39,15 +39,17 @@ SERIES_TICKER = "KXBTC15M"
 
 
 def get_btc_price():
-    """Get current BTC price from CoinGecko (no geo-restrictions)"""
+    """Get current BTC price from Kraken (real-time, closest to CF Benchmarks)"""
     try:
         resp = requests.get(
-            "https://api.coingecko.com/api/v3/simple/price",
-            params={"ids": "bitcoin", "vs_currencies": "usd"},
+            "https://api.kraken.com/0/public/Ticker",
+            params={"pair": "XBTUSD"},
             timeout=5
         )
         resp.raise_for_status()
-        return float(resp.json()['bitcoin']['usd'])
+        data = resp.json()
+        # Kraken returns last trade price in 'c' field (first element)
+        return float(data['result']['XXBTZUSD']['c'][0])
     except Exception as e:
         print(f"[BTC PRICE ERROR] {e}")
         return None
