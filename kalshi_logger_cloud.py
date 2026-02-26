@@ -35,16 +35,19 @@ except ImportError:
     print("WARNING: gspread not installed. Run: pip install gspread")
 
 KALSHI_API = "https://api.elections.kalshi.com/trade-api/v2"
-BINANCE_API = "https://api.binance.com/api/v3"
 SERIES_TICKER = "KXBTC15M"
 
 
 def get_btc_price():
-    """Get current BTC price from Binance"""
+    """Get current BTC price from CoinGecko (no geo-restrictions)"""
     try:
-        resp = requests.get(f"{BINANCE_API}/ticker/price", params={"symbol": "BTCUSDT"}, timeout=5)
+        resp = requests.get(
+            "https://api.coingecko.com/api/v3/simple/price",
+            params={"ids": "bitcoin", "vs_currencies": "usd"},
+            timeout=5
+        )
         resp.raise_for_status()
-        return float(resp.json()['price'])
+        return float(resp.json()['bitcoin']['usd'])
     except Exception as e:
         print(f"[BTC PRICE ERROR] {e}")
         return None
