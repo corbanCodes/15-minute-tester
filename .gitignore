@@ -1,0 +1,33 @@
+# Credentials - NEVER COMMIT
+gen-lang-client-*.json
+*credentials*.json
+**/milliondollarapikey
+*.pem
+*.key
+.env
+.env.*
+
+# Data files (too large, use Google Sheets instead)
+*.csv
+*.parquet
+*.zip
+
+# Logs
+*.log
+
+# Archive folder (keep locally, don't need in cloud)
+archive/
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
