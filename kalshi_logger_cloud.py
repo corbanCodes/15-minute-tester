@@ -35,7 +35,20 @@ except ImportError:
     print("WARNING: gspread not installed. Run: pip install gspread")
 
 KALSHI_API = "https://api.elections.kalshi.com/trade-api/v2"
+BINANCE_API = "https://api.binance.com/api/v3"
 SERIES_TICKER = "KXBTC15M"
+
+
+def get_btc_price():
+    """Get current BTC price from Binance"""
+    try:
+        resp = requests.get(f"{BINANCE_API}/ticker/price", params={"symbol": "BTCUSDT"}, timeout=5)
+        resp.raise_for_status()
+        return float(resp.json()['price'])
+    except Exception as e:
+        print(f"[BTC PRICE ERROR] {e}")
+        return None
+
 
 # Sheet names
 PRICE_SHEET = "price_log"
@@ -75,7 +88,7 @@ class GoogleSheetsLogger:
 
             # Get or create sheets
             self.price_sheet = self._get_or_create_sheet(PRICE_SHEET, [
-                'timestamp', 'ticker', 'strike_price', 'mins_left',
+                'timestamp', 'ticker', 'strike_price', 'btc_price', 'mins_left',
                 'yes_ask', 'no_ask', 'yes_bid', 'no_bid',
                 'yes_depth_1', 'yes_depth_3', 'yes_depth_all',
                 'no_depth_1', 'no_depth_3', 'no_depth_all',
@@ -105,7 +118,7 @@ class GoogleSheetsLogger:
     def is_connected(self):
         return self.client is not None and self.spreadsheet is not None
 
-    def log_price(self, ticker, strike, mins_left, market, orderbook):
+    def log_price(self, ticker, strike, btc_price, mins_left, market, orderbook):
         if not self.price_sheet:
             return False
 
@@ -119,6 +132,7 @@ class GoogleSheetsLogger:
             datetime.now().isoformat(),
             ticker,
             strike,
+            btc_price or 0,
             round(mins_left, 1),
             yes_ask,
             no_ask,
@@ -316,9 +330,10 @@ def run():
 
             if should_log and mins_left >= 0:
                 strike = details.get('floor_strike', 0)
+                btc_price = get_btc_price()
                 orderbook = get_orderbook(ticker)
 
-                if sheets.log_price(ticker, strike, mins_left, details, orderbook):
+                if sheets.log_price(ticker, strike, btc_price, mins_left, details, orderbook):
                     snapshots_logged += 1
 
                 yes = details.get('yes_ask', 0)
@@ -329,7 +344,12 @@ def run():
                     depth = orderbook['yes_depth_3'] if yes > no else orderbook['no_depth_3']
                     depth_str = f" | Depth: {depth}"
 
-                log(f"{mins_left:.1f}m | YES:{yes}c NO:{no}c{depth_str} | Total: {snapshots_logged}")
+                btc_str = f" | BTC: ${btc_price:,.2f}" if btc_price else ""
+                above_below = ""
+                if btc_price and strike:
+                    above_below = " (ABOVE)" if btc_price > strike else " (BELOW)"
+
+                log(f"{mins_left:.1f}m | YES:{yes}c NO:{no}c{depth_str}{btc_str}{above_below} | Total: {snapshots_logged}")
                 last_log_minute = current_minute
 
             # Adaptive sleep
